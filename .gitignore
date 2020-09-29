@@ -1,0 +1,14 @@
+weights/
+*.jpg
+*.JPG
+*.PNG
+*.png
+*.JPEG
+*.jpeg
+.idea/
+demo/
+images/
+*.pt
+*.pth
+*.tar
+*.pyc
