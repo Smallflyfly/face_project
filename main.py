@@ -108,6 +108,8 @@ async def faceMatch(file: UploadFile = File(...)):
             max_similarity = cos_similarity.cpu().detach().numpy()[0]
 
     # print(max_similarity)
+    if max_similarity > 1.1:
+        return {"code": 400, "success": False, "message": "未匹配到"}
     print('match time: ', time.time() - tic)
     return {"code": 200, "success": True, "name": name}
 
