@@ -139,3 +139,4 @@ def cosine_similarity(x, y, norm=False):
     # cos = dot_product / (np.sqrt(square_sum_x) * np.sqrt(square_sum_y))
 
     return 0.5 * cos + 0.5 if norm else cos
+
