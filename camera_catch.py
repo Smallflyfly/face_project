@@ -5,6 +5,7 @@
 @time: 2020/11/10
 """
 import collections
+import pickle
 import time
 from time import sleep
 
@@ -24,6 +25,29 @@ from models.retinaface import RetinaFace
 from utils.net_utils import load_model, image_process, process_face_data
 import numpy as np
 
+
+def load_state_dict(model, fname):
+    """
+    Set parameters converted from Caffe models authors of VGGFace2 provide.
+    See https://www.robots.ox.ac.uk/~vgg/data/vgg_face2/.
+    Arguments:
+        model: model
+        fname: file name of parameters converted from a Caffe model, assuming the file format is Pickle.
+    """
+    with open(fname, 'rb') as f:
+        weights = pickle.load(f, encoding='latin1')
+
+    own_state = model.state_dict()
+    for name, param in weights.items():
+        if name in own_state:
+            try:
+                own_state[name].copy_(torch.from_numpy(param))
+            except Exception:
+                raise RuntimeError('While copying the parameter named {}, whose dimensions in the model are {} and whose '\
+                                   'dimensions in the checkpoint are {}.'.format(name, own_state[name].size(), param.size()))
+        else:
+            raise KeyError('unexpected key "{}" in state_dict'.format(name))
+
 # cfg = cfg_re50
 cfg = cfg_mnet
 retina_trained_model = './weights/mobilenet0.25_Final.pth'
@@ -32,16 +56,20 @@ retina_net = load_model(retina_net, retina_trained_model, False)
 retina_net = retina_net.cuda(0)
 retina_net.eval()
 cudnn.benchmark = True
-device = torch.device("cuda")
+
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
 
 input_frame = collections.deque()
 output_frame = collections.deque()
 
-resnet = InceptionResnetV1(pretrained='vggface2', device=None).eval()
+resnet = InceptionResnetV1(pretrained='vggface2', device=device).eval()
+
 transform = transforms.Compose(
     [transforms.ToTensor()]
 )
 
+load_state_dict(resnet, './weights/resnet50_ft_weight.pkl')
 
 def detection(im):
     resize = 1
@@ -64,7 +92,7 @@ def capture():
             im_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
             im_crop = im_pil.crop(box=(xmin, ymin, xmax, ymax))
             tic = time.time()
-            feature_in = generate_feature(im_pil)
+            feature_in = generate_feature(im_crop)
             print('feature generate: ', time.time() - tic)
             array_in = string2array(feature_in)
             torch_in_feature = torch.from_numpy(array_in).cuda().unsqueeze(0)
@@ -77,10 +105,16 @@ def capture():
                 "font/FZY1JW.TTF", 20, encoding="utf-8"
             )
             draw.text((xmin, ymin - 20), name, font=fontStyle)
+            print(name)
             frame = cv2.cvtColor(np.asarray(image), cv2.COLOR_BGR2RGB)
-            output_frame.append(frame)
+        output_frame.append(frame)
+        show()
 
         # cv2.imshow('im', frame)
+
+        # if output_frame:
+        #     frame = output_frame.popleft()
+        #     cv2.imshow('im', frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
@@ -90,7 +124,7 @@ def capture():
 
 
 def generate_feature(im):
-    im = im.resize((128, 128))
+    im = im.resize((160, 160))
     im_tensor = transform(im)
     img_embedding = resnet(im_tensor.unsqueeze(0))[0]
     features = img_embedding.cpu().detach().numpy().tostring()
@@ -118,8 +152,8 @@ def match(torch_in_feature):
             name = face.name
             max_similarity = cos_similarity.cpu().detach().numpy()[0]
             # print(max_similarity)
-    print('match time: ', time.time() - tic)
-    if max_similarity > 1.1:
+    print('match time: {}, similarity:{}'.format(time.time() - tic, max_similarity))
+    if max_similarity > 0.9:
         return None
     else:
         return name
@@ -137,8 +171,8 @@ def face_detection():
 
 
 def show():
-    print(len(output_frame))
-    while True:
+    # print(len(output_frame))
+    while True and output_frame:
         if output_frame:
             frame = output_frame.popleft()
             cv2.imshow('im', frame)
@@ -151,10 +185,10 @@ if __name__ == '__main__':
     # capture()
     capture_process = multiprocessing.Process(target=capture)
     capture_process.start()
-    # sleep(1)
-    show()
-    # show_process = multiprocessing.Process(target=show)
-    # show_process.start()
+    sleep(5)
+    # show()
+    show_process = multiprocessing.Process(target=show)
+    show_process.start()
     # capture = cv2.VideoCapture(1)
     # while True:
     #     _, frame = capture.read()
