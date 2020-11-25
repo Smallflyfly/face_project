@@ -26,8 +26,10 @@ app = FastAPI(title='人脸管理接口')
 mongodb = Mongodb()
 db = mongodb.client.facedb
 
-transform = transforms.Compose(
-    [transforms.ToTensor()]
+transform = transforms.Compose([
+    transforms.Resize(size=(160, 160)),
+    transforms.ToTensor()
+]
 )
 resnet = InceptionResnetV1(pretrained='vggface2').eval()
 
@@ -46,6 +48,7 @@ async def uploadFile(file: UploadFile = File(...)):
     det = dets[0]
     boxes, score = det[:4], det[4]
     im_pil = im_pil.crop([boxes[0], boxes[1], boxes[2], boxes[3]])
+    print(im_pil.size)
     features = generate_feature(im_pil)
     mysqldb = MySQLDB()
     session = mysqldb.session()
@@ -115,8 +118,12 @@ async def faceMatch(file: UploadFile = File(...)):
 
 
 def generate_feature(im):
-    im = im.resize((128, 128))
+    # im = im.resize((160, 160))
+    if im.mode != 'RGB':
+        im = im.convert('RGB')
+    print(im.mode)
     im_tensor = transform(im)
+    print(im_tensor.shape)
     img_embedding = resnet(im_tensor.unsqueeze(0))[0]
     features = img_embedding.cpu().detach().numpy().tostring()
     return features
@@ -133,6 +140,7 @@ def init_image(contents):
         im_pil = im_pil.resize((new_w, new_h))
 
     cv_im = cv2.cvtColor(np.asarray(im_pil), cv2.COLOR_RGB2BGR)
+    print(cv_im.shape)
     return im_pil, cv_im
 
 

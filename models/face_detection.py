@@ -14,7 +14,7 @@ from utils.net_utils import load_model, image_process, process_face_data
 
 # cfg = cfg_re50
 cfg = cfg_mnet
-retina_trained_model = '../weights/mobilenet0.25_Final.pth'
+retina_trained_model = './weights/mobilenet0.25_Final.pth'
 retina_net = RetinaFace(cfg=cfg, phase='test')
 retina_net = load_model(retina_net, retina_trained_model, False)
 retina_net = retina_net.cuda(0)

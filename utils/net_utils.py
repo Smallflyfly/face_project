@@ -2,12 +2,37 @@
 # @Time    : 2020/6/23 16:05
 # @Author  : Fangpf
 # @FileName: net_utils.py
+import pickle
+
 import cv2
 import torch
 import numpy as np
 from layers.functions.prior_box import PriorBox
 from utils.box_utils import decode, decode_landm
 from utils.nms.py_cpu_nms import py_cpu_nms
+
+
+def load_state_dict(model, fname):
+    """
+    Set parameters converted from Caffe models authors of VGGFace2 provide.
+    See https://www.robots.ox.ac.uk/~vgg/data/vgg_face2/.
+    Arguments:
+        model: model
+        fname: file name of parameters converted from a Caffe model, assuming the file format is Pickle.
+    """
+    with open(fname, 'rb') as f:
+        weights = pickle.load(f, encoding='latin1')
+
+    own_state = model.state_dict()
+    for name, param in weights.items():
+        if name in own_state:
+            try:
+                own_state[name].copy_(torch.from_numpy(param))
+            except Exception:
+                raise RuntimeError('While copying the parameter named {}, whose dimensions in the model are {} and whose '\
+                                   'dimensions in the checkpoint are {}.'.format(name, own_state[name].size(), param.size()))
+        else:
+            raise KeyError('unexpected key "{}" in state_dict'.format(name))
 
 
 def check_keys(model, pretrained_state_dict):
@@ -68,7 +93,7 @@ def process_face_data(cfg, im, im_height, im_width, loc, scale, conf, landms,
     landms = landms.cpu().numpy()
 
     # ignore low score
-    inds = np.where(scores > 0.6)[0]
+    inds = np.where(scores > 0.9)[0]
     boxes = boxes[inds]
     scores = scores[inds]
 
@@ -139,4 +164,6 @@ def cosine_similarity(x, y, norm=False):
     # cos = dot_product / (np.sqrt(square_sum_x) * np.sqrt(square_sum_y))
 
     return 0.5 * cos + 0.5 if norm else cos
+
+
 
