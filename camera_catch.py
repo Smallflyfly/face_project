@@ -107,6 +107,7 @@ def capture():
                 im_crop = im_pil.crop(box=(xmin, ymin, xmax, ymax))
                 # feature_in = generate_feature(im_crop)
                 feature_in = generate_feature_resnet(im_crop)
+                print(feature_in)
                 array_in = string2array(feature_in)
                 torch_in_feature = torch.from_numpy(array_in).cuda().unsqueeze(0)
                 tic = time.time()

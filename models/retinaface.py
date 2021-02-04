@@ -1,9 +1,7 @@
 import torch
 import torch.nn as nn
-import torchvision.models.detection.backbone_utils as backbone_utils
 import torchvision.models._utils as _utils
 import torch.nn.functional as F
-from collections import OrderedDict
 
 from models.net import MobileNetV1 as MobileNetV1
 from models.net import FPN as FPN
