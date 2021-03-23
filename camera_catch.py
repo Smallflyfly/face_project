@@ -35,7 +35,7 @@ retina_net = RetinaFace(cfg=cfg, phase='test')
 retina_net = load_model(retina_net, retina_trained_model, False)
 retina_net = retina_net.cuda(0)
 retina_net.eval()
-cudnn.benchmark = True
+# cudnn.benchmark = True
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
@@ -109,6 +109,7 @@ def capture():
                 feature_in = generate_feature_resnet(im_crop)
                 print(feature_in)
                 array_in = string2array(feature_in)
+                print('feature generate: ', time.time() - tic)
                 torch_in_feature = torch.from_numpy(array_in).cuda().unsqueeze(0)
                 tic = time.time()
                 # name, similarity = match(faces, torch_in_feature)
@@ -116,11 +117,11 @@ def capture():
                 # if not name:
                 #     continue
                 # image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-                # draw = ImageDraw.Draw(image)
-                # fontStyle = ImageFont.truetype(
-                #     "font/FZY1JW.TTF", 20, encoding="utf-8"
-                # )
-                # draw.text((xmin, ymin - 20), name, font=fontStyle)
+                draw = ImageDraw.Draw(image)
+                fontStyle = ImageFont.truetype(
+                    "font/FZY1JW.TTF", 20, encoding="utf-8"
+                )
+                draw.text((xmin, ymin - 20), name, font=fontStyle)
                 # frame = cv2.cvtColor(np.asarray(image), cv2.COLOR_BGR2RGB)
         count += 1
         cv2.imshow('im', frame)
